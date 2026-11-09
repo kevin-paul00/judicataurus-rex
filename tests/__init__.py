@@ -1,0 +1,1 @@
+"""Testsuite für Judicataurus Rex."""
