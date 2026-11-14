@@ -1,8 +1,11 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, notice, external %}
 {% block content %}
-<form class="search" method="get" action="/" id="search-form">
+<h1 class="page__title">Judikatur <span class="legal">zu Rechtsnormen</span></h1>
+
+<form class="card search" method="get" action="/" id="search-form">
   <div class="field">
-    <label for="norms">Rechtsnormen <small>(eine pro Zeile)</small></label>
+    <label for="norms">Rechtsnormen <span class="label">eine pro Zeile</span></label>
     <textarea id="norms" name="norms" rows="4" spellcheck="false"
       placeholder="UG § 63&#10;§ 31 Abs 3 HSG 2014&#10;B-VG Art 133">{{ state.norms }}</textarea>
     <p class="hint">Formate: <code>UG § 63</code>, <code>§ 63 Abs 1 Z 3 UG</code>, <code>HSG 2014</code> (ganzes Gesetz), <code>B-VG Art 133</code>.
@@ -11,84 +14,77 @@
 
   <div class="row">
     <fieldset>
-      <legend>Gerichte</legend>
+      <legend class="label">Gerichte</legend>
       {% for c in all_courts %}
       <label class="check"><input type="checkbox" name="court" value="{{ c.value }}" {% if c in state.courts %}checked{% endif %}> {{ c.label }}</label>
       {% endfor %}
     </fieldset>
 
     <fieldset>
-      <legend>Verknüpfung mehrerer Normen</legend>
+      <legend class="label">Verknüpfung</legend>
       <label class="check"><input type="radio" name="mode" value="or" {% if state.mode == 'or' %}checked{% endif %}> ODER: mindestens eine Norm</label>
       <label class="check"><input type="radio" name="mode" value="and" {% if state.mode == 'and' %}checked{% endif %}> UND: alle Normen</label>
-
-      <legend class="sub">Dokumenttyp</legend>
+      <p class="label legend-sub">Dokumenttyp</p>
       {% for t in all_doc_types %}
       <label class="check"><input type="checkbox" name="doc_type" value="{{ t.value }}" {% if t in state.doc_types %}checked{% endif %}> {{ t.label }}</label>
       {% endfor %}
     </fieldset>
 
     <fieldset>
-      <legend>Entscheidungsdatum</legend>
+      <legend class="label">Entscheidungsdatum</legend>
       <label class="stack">von <input type="date" name="date_from" value="{{ state.date_from }}"></label>
       <label class="stack">bis <input type="date" name="date_to" value="{{ state.date_to }}"></label>
     </fieldset>
   </div>
 
   <div class="actions">
-    <button type="submit" class="primary">Suchen</button>
+    <button type="submit" class="button button--primary">Suchen</button>
     <span class="busy" id="search-busy" hidden>Suche läuft … (das RIS erlaubt nur eine Anfrage alle {{ interval|round(1) }} s)</span>
   </div>
 </form>
 
-{% if errors %}
-<div class="notice error">
-  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
-</div>
-{% endif %}
+{% if errors %}{{ notice('error', errors) }}{% endif %}
 
 {% if result %}
-<section class="results">
-  <div class="results-head">
-    <h2>{{ result.decisions|length }} Dokument{{ '' if result.decisions|length == 1 else 'e' }}</h2>
-    <span class="meta">{{ result.request_count }} RIS-Anfragen{% if result.request_count == 0 %} (aus dem Cache){% endif %}</span>
-  </div>
+<section class="results" aria-labelledby="results-title">
+  <h2 class="section__head" id="results-title">
+    {{ result.decisions|length }} Dokument{{ '' if result.decisions|length == 1 else 'e' }}
+    <span class="section__meta">{{ result.request_count }} RIS-Anfragen{% if result.request_count == 0 %} · aus dem Cache{% endif %}</span>
+  </h2>
 
-  {% for w in result.warnings %}
-  <div class="notice warn">{{ w }}</div>
-  {% endfor %}
+  {% for w in result.warnings %}{{ notice('warn', w) }}{% endfor %}
 
   {% if result.decisions %}
   <form method="post" action="/zip" id="zip-form" data-max="{{ max_zip }}" data-interval="{{ interval }}">
     <div class="toolbar">
       <label class="check"><input type="checkbox" id="select-all"> alle auswählen</label>
-      <span id="selected-count">0 ausgewählt</span>
-      <button type="submit" class="primary" id="zip-button" disabled>Ausgewählte als ZIP</button>
+      <span id="selected-count" class="label">0 ausgewählt</span>
+      <button type="submit" class="button button--primary" id="zip-button" disabled>{{ icon('download') }} Ausgewählte als ZIP</button>
       <span class="busy" id="zip-busy" hidden></span>
     </div>
 
     <div class="table-wrap">
-    <table>
+    <table class="decisions">
       <thead>
-        <tr><th></th><th>Datum</th><th>Gericht</th><th>Geschäftszahl</th><th>Typ</th><th>Normen</th><th>Dokument</th></tr>
+        <tr><th><span class="sr-only">Auswahl</span></th><th>Datum</th><th>Gericht</th><th>Geschäftszahl</th><th>Typ</th><th>Normen</th><th>Dokument</th></tr>
       </thead>
       <tbody>
       {% for d in result.decisions %}
         <tr>
-          <td><input type="checkbox" class="pick" name="doc" value="{{ d.court.value }}:{{ d.id }}" {% if not d.pdf_url %}disabled title="kein PDF verfügbar"{% endif %}></td>
-          <td class="nowrap">{{ d.decision_date.strftime('%d.%m.%Y') if d.decision_date else '–' }}</td>
+          <td><input type="checkbox" class="pick" name="doc" value="{{ d.court.value }}:{{ d.id }}" aria-label="{{ d.case_number_display }} auswählen" {% if not d.pdf_url %}disabled title="kein PDF verfügbar"{% endif %}></td>
+          <td class="nowrap mono">{{ d.decision_date.strftime('%d.%m.%Y') if d.decision_date else '–' }}</td>
           <td>{{ d.organ }}</td>
           <td>
             <span class="gz">{{ d.case_number_display }}</span>
             {% if d.ecli %}<div class="ecli">{{ d.ecli }}</div>{% endif %}
             {% if d.keywords %}<div class="keywords">{{ d.keywords }}</div>{% endif %}
           </td>
-          <td><span class="tag {{ 'tag-text' if d.doc_type.value == 'Text' else 'tag-rs' }}">{{ d.doc_type.label }}</span></td>
-          <td class="norms">{% for n in d.norms %}<span>{{ n }}</span>{% endfor %}</td>
-          <td class="nowrap links">
-            {% if d.pdf_url %}<a href="/pdf/{{ d.court.value }}/{{ d.id }}">PDF</a>{% endif %}
-            {% if d.ris_url %}<a href="{{ d.ris_url }}" target="_blank" rel="noopener">RIS</a>{% endif %}
-          </td>
+          <td><span class="tag{{ ' tag--muted' if d.doc_type.value != 'Text' }}">{{ d.doc_type.label }}</span></td>
+          <td><ul class="norms">{% for n in d.norms %}{% set link = statute_link(n, d.decision_date) %}<li>{% if link %}<a href="{{ link }}" title="Fassung am Entscheidungstag und Erläuterungen anzeigen">{{ n }}</a>{% else %}{{ n }}{% endif %}</li>{% endfor %}</ul></td>
+          <td class="nowrap"><div class="links links--stacked">
+            {% if d.pdf_url %}<a href="/pdf/{{ d.court.value }}/{{ d.id }}">{{ icon('download') }}PDF</a>{% endif %}
+            {% if d.ris_url %}{{ external(d.ris_url, 'RIS') }}{% endif %}
+          </div></td>
         </tr>
       {% endfor %}
       </tbody>
@@ -98,6 +94,6 @@
   {% endif %}
 </section>
 {% elif searched and not errors %}
-<p class="notice">Keine Treffer.</p>
+{{ notice('info', 'Keine Treffer.') }}
 {% endif %}
 {% endblock %}

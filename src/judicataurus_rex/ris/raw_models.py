@@ -100,10 +100,53 @@ class JudikaturMeta(RawModel):
     gesamte_entscheidung_url: OptStr = Field(default=None, alias="GesamteEntscheidungUrl")
 
 
+class BrKonsMeta(RawModel):
+    """Metadaten einer Fassung im konsolidierten Bundesrecht (``Applikation=BrKons``)."""
+
+    kundmachungsorgan: OptStr = Field(default=None, alias="Kundmachungsorgan")
+    dokumenttyp: OptStr = Field(default=None, alias="Dokumenttyp")
+    artikel_paragraph_anlage: OptStr = Field(default=None, alias="ArtikelParagraphAnlage")
+    paragraphnummer: OptStr = Field(default=None, alias="Paragraphnummer")
+    stammnorm_publikationsorgan: OptStr = Field(default=None, alias="StammnormPublikationsorgan")
+    stammnorm_bgblnummer: OptStr = Field(default=None, alias="StammnormBgblnummer")
+    novellen_publikationsorgan: OptStr = Field(default=None, alias="NovellenPublikationsorgan")
+    novellen_bgblnummer: OptStr = Field(default=None, alias="NovellenBgblnummer")
+    inkrafttretensdatum: OptStr = Field(default=None, alias="Inkrafttretensdatum")
+    ausserkrafttretensdatum: OptStr = Field(default=None, alias="Ausserkrafttretensdatum")
+    gesetzesnummer: OptStr = Field(default=None, alias="Gesetzesnummer")
+    abkuerzung: OptStr = Field(default=None, alias="Abkuerzung")
+
+
+class BgblAuthMeta(RawModel):
+    """Metadaten eines authentischen Bundesgesetzblatts (``Applikation=BgblAuth``)."""
+
+    bgblnummer: OptStr = Field(default=None, alias="Bgblnummer")
+    teil: OptStr = Field(default=None, alias="Teil")
+    ausgabedatum: OptStr = Field(default=None, alias="Ausgabedatum")
+    typ: OptStr = Field(default=None, alias="Typ")
+    gesetzgebungsperiode: OptStr = Field(default=None, alias="Gesetzgebungsperiode")
+    datum_nationalrat: OptStr = Field(default=None, alias="DatumNationalrat")
+    nummer_nationalrat: OptStr = Field(default=None, alias="NummerNationalrat")
+    regierungsvorlage: ItemList = Field(default_factory=ItemList, alias="Regierungsvorlage")
+    initiativantrag: ItemList = Field(default_factory=ItemList, alias="Initiativantrag")
+    ausschussbericht_nationalrat: ItemList = Field(
+        default_factory=ItemList, alias="AusschussberichtNationalrat"
+    )
+
+
+class BundesrechtMeta(RawModel):
+    kurztitel: OptStr = Field(default=None, alias="Kurztitel")
+    titel: OptStr = Field(default=None, alias="Titel")
+    eli: OptStr = Field(default=None, alias="Eli")
+    br_kons: BrKonsMeta | None = Field(default=None, alias="BrKons")
+    bgbl_auth: BgblAuthMeta | None = Field(default=None, alias="BgblAuth")
+
+
 class Metadaten(RawModel):
     technisch: Technisch = Field(alias="Technisch")
     allgemein: Allgemein = Field(default_factory=Allgemein, alias="Allgemein")
     judikatur: JudikaturMeta = Field(default_factory=JudikaturMeta, alias="Judikatur")
+    bundesrecht: BundesrechtMeta | None = Field(default=None, alias="Bundesrecht")
 
 
 class Data(RawModel):

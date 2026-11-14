@@ -33,7 +33,7 @@ dev = [
 ]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "tools"]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
 venvPath = "."
@@ -42,7 +42,7 @@ venv = ".venv"
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-src = ["src", "tests"]
+src = ["src", "tests", "tools"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "ANN", "SIM", "RUF"]

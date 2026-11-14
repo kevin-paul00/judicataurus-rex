@@ -1,0 +1,26 @@
+{# Bausteine im KP-CD. Icons: Tabler Icons (MIT), wie im CD unter assets/icons/function. #}
+
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'download' -%}
+<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/>
+{%- elif name == 'external-link' -%}
+<path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/><path d="M11 13l9 -9"/><path d="M15 4h5v5"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{# Meldung. Funktionsfarben nie allein, immer mit Wort (Handbuch 4.6). #}
+{% macro notice(kind, items) -%}
+{% set words = {'error': 'Fehler', 'warn': 'Achtung', 'info': 'Hinweis'} %}
+<div class="notice notice--{{ kind }}"{% if kind == 'error' %} role="alert"{% endif %}>
+  <span class="label notice__label">{{ words[kind] }}</span>
+  {% if items is string %}<p>{{ items }}</p>
+  {% elif items|length == 1 %}<p>{{ items[0] }}</p>
+  {% else %}<ul>{% for i in items %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro external(url, text) -%}
+<a href="{{ url }}" target="_blank" rel="noopener" class="ext">{{ text }}{{ icon('external-link') }}</a>
+{%- endmacro %}

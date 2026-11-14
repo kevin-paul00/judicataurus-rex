@@ -9,6 +9,11 @@ die Live-API geprüft (2026-11):
 
 Unbekannte Gesetze werden unverändert an die API übergeben. Weitere Einträge
 können in :data:`KNOWN_LAWS` ergänzt werden.
+
+Für die Gesetzesansicht (Fassungen und Erläuterungen) braucht ein Eintrag zusätzlich
+die ``gesetzesnummer`` aus dem RIS (steht in der URL der geltenden Fassung, z. B.
+``…Gesetzesnummer=20002128``) und den ``full_title``, wie er in den Erläuterungen
+der Regierungsvorlagen steht (z. B. „Universitätsgesetz 2002“).
 """
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +27,10 @@ class LawAliases(BaseModel):
     model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
 
     canonical: str
+    # Amtlicher Titel, wie er in den Erläuterungen („Änderung des …“) vorkommt.
+    full_title: str
+    # Gesetzesnummer im RIS (Bundesrecht konsolidiert); None = keine Gesetzesansicht.
+    gesetzesnummer: str | None = None
     # Alles, was ein Benutzer eingeben könnte (Vergleich ohne Groß-/Kleinschreibung).
     names: tuple[str, ...]
     # Zitierweise je Gericht. Gerichte ohne Eintrag bekommen alle Werte aus ``fallback``.
@@ -42,6 +51,8 @@ class LawAliases(BaseModel):
 KNOWN_LAWS: tuple[LawAliases, ...] = (
     LawAliases(
         canonical="UG",
+        full_title="Universitätsgesetz 2002",
+        gesetzesnummer="20002128",
         names=(
             "UG",
             "UG 2002",
@@ -58,6 +69,8 @@ KNOWN_LAWS: tuple[LawAliases, ...] = (
     ),
     LawAliases(
         canonical="HSG 2014",
+        full_title="Hochschülerinnen- und Hochschülerschaftsgesetz 2014",
+        gesetzesnummer="20008892",
         names=(
             "HSG",
             "HSG 2014",

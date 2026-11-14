@@ -97,6 +97,47 @@ class Decision(DomainModel):
         return "; ".join(self.case_numbers) if self.case_numbers else self.id
 
 
+class LawVersion(DomainModel):
+    """Eine Fassung eines Paragraphen im konsolidierten Bundesrecht."""
+
+    id: str = Field(pattern=DOCUMENT_ID_PATTERN.pattern)
+    title: str
+    label: str  # z. B. "§ 67"
+    valid_from: date | None
+    valid_to: date | None  # None = geltende Fassung
+    amending_bgbl: str | None  # z. B. "BGBl. I Nr. 93/2021"; None = Stammfassung
+    original_bgbl: str | None  # z. B. "BGBl. I Nr. 120/2002"
+    html_url: str | None
+    pdf_url: str | None
+    ris_url: str | None
+
+    @property
+    def source_bgbl(self) -> str | None:
+        """Das Bundesgesetzblatt, mit dem diese Fassung entstanden ist."""
+        return self.amending_bgbl or self.original_bgbl
+
+    def is_valid_on(self, day: date) -> bool:
+        starts = self.valid_from is None or self.valid_from <= day
+        ends = self.valid_to is None or day <= self.valid_to
+        return starts and ends
+
+
+class BgblInfo(DomainModel):
+    """Ein Bundesgesetzblatt samt Verweis auf die Parlamentsmaterialien."""
+
+    id: str = Field(pattern=DOCUMENT_ID_PATTERN.pattern)
+    bgbl: str  # "BGBl. I Nr. 93/2021"
+    title: str | None
+    issue_date: date | None
+    legislative_period: str | None  # "XXVII"
+    rv_numbers: tuple[str, ...]  # Regierungsvorlagen ("662")
+    ab_numbers: tuple[str, ...]  # Ausschussberichte des Nationalrats ("705")
+    ia_numbers: tuple[str, ...] = ()  # Initiativanträge ("2235" für „2235/A“)
+    nr_session: str | None  # Sitzung des Nationalrats ("89")
+    nr_session_date: date | None
+    ris_url: str | None
+
+
 class SearchRequest(DomainModel):
     norms: tuple[NormQuery, ...] = Field(min_length=1)
     courts: tuple[Court, ...] = Field(min_length=1)

@@ -1,95 +1,273 @@
+/* Judicataurus Rex im KP-CD
+ *
+ * Farben, Schriften, Abstände und Radien kommen ausschließlich aus kp/css/kp-tokens.css
+ * (--kp-…), das unverändert aus dem CD-Repository übernommen wird (tools/sync_cd.py).
+ * Kopf, Split, Blatt, Muster, Schaltflächen, Abschnittsköpfe und Fuß folgen kp-site.css
+ * der KP-Website; darunter stehen die Bausteine der App.
+ *
+ * Regeln aus dem Gestaltungshandbuch: Tintenblau für Links und Schaltflächen, Serif für
+ * juristische Inhalte, Mono für Labels und Kennungen, Pink nur als Knoten/Marker/Fokus,
+ * keine Schatten und Verläufe, Radius 1 u für Karten und Schaltflächen, Tags eckig,
+ * Funktionsfarben nie ohne Wort oder Symbol.
+ */
 :root {
-  --bg: #f7f6f2;
-  --surface: #ffffff;
-  --text: #1d1f23;
-  --muted: #5e6470;
-  --border: #dddad2;
-  --accent: #8a1c1c;
-  --accent-text: #ffffff;
-  --warn-bg: #fff6dc;
-  --warn-border: #e5c76b;
-  --error-bg: #fde8e8;
-  --error-border: #e19a9a;
-  --tag-text: #e4eefc;
-  --tag-rs: #efe9f9;
-  color-scheme: light dark;
+  --content-width: 72rem;
+  --gutter: clamp(var(--kp-space-m), 4vw, var(--kp-space-xl));
+  --radius: var(--kp-radius);
+  --rule: var(--kp-line-width);
+  --pattern: url("kp/img/kp-pattern-light.svg");
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17181b;
-    --surface: #202226;
-    --text: #e8e6e1;
-    --muted: #a1a5ad;
-    --border: #3a3d43;
-    --accent: #d36a5c;
-    --accent-text: #17181b;
-    --warn-bg: #3a3218;
-    --warn-border: #7a6526;
-    --error-bg: #3d2121;
-    --error-border: #7d3a3a;
-    --tag-text: #23344e;
-    --tag-rs: #352a4a;
-  }
+  :root:not([data-theme="light"]) { --pattern: url("kp/img/kp-pattern-dark.svg"); }
 }
-* { box-sizing: border-box; }
+:root[data-theme="dark"] { --pattern: url("kp/img/kp-pattern-dark.svg"); }
+
+/* ------------------------------------------------------------ Grundlagen */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+  background: var(--kp-bg) var(--pattern) center top / auto repeat;
+  color: var(--kp-text);
+  font: 400 1rem/1.6 var(--kp-font-sans);
+  overflow-wrap: break-word;
 }
-main { max-width: 1280px; margin: 0 auto; padding: 16px; }
-.site-header {
-  display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline;
-  padding: 14px 16px; border-bottom: 1px solid var(--border); background: var(--surface);
+a { color: var(--kp-tech); text-underline-offset: .2em; text-decoration-thickness: var(--rule); }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--kp-node); outline-offset: 3px; border-radius: 2px; }
+strong, b { font-weight: 600; }
+code, .mono { font-family: var(--kp-font-mono); font-size: .9em; }
+h1, h2, h3, h4 { font-weight: 600; line-height: 1.2; margin: 0; }
+p { margin: 0 0 .75em; }
+.wrap { max-width: var(--content-width); margin-inline: auto; padding-inline: var(--gutter); }
+.sheet {
+  flex: 1 0 auto; display: flex; flex-direction: column;
+  width: 100%; max-width: calc(var(--content-width) + 2 * var(--gutter));
+  margin-inline: auto;
+  background: var(--kp-bg);
+  border-inline: var(--rule) solid var(--kp-line);
 }
-.brand { font-weight: 700; font-size: 1.25rem; color: var(--accent); text-decoration: none; }
-.tagline { color: var(--muted); }
-.site-footer { max-width: 1280px; margin: 32px auto; padding: 0 16px; color: var(--muted); font-size: .85rem; }
+.page { flex: 1 0 auto; width: 100%; padding-block: var(--kp-space-xl) var(--kp-space-3xl); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.skip-link { position: absolute; left: var(--gutter); top: -4rem; z-index: 10; }
+.skip-link:focus { top: var(--kp-space-m); background: var(--kp-surface); padding: var(--kp-space-xs) var(--kp-space-s); }
+.icon { display: inline-block; width: 1.15em; height: 1.15em; flex: none; vertical-align: -.2em; }
 
-.search { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-.field label { font-weight: 600; display: block; margin-bottom: 4px; }
-textarea, input[type=date] {
-  width: 100%; font: inherit; color: inherit; background: var(--bg);
-  border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+/* Mono-Beschriftung: Labels, Navigation, Kennungen (Versalien, leicht gesperrt) */
+.label {
+  font-family: var(--kp-font-mono); font-size: .75rem; font-weight: 400;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--kp-muted);
 }
-textarea { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
-.hint { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
-.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
-fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 0; }
-legend { font-weight: 600; padding: 0 4px; }
-legend.sub { margin-top: 8px; float: left; width: 100%; padding: 0; }
-.check { display: block; padding: 2px 0; }
-.stack { display: block; margin-bottom: 6px; }
-.actions, .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
-button {
-  font: inherit; border-radius: 6px; border: 1px solid var(--border);
-  padding: 8px 16px; cursor: pointer; background: var(--surface); color: var(--text);
+.times { color: var(--kp-node); }
+
+/* ------------------------------------------------------------ Split: Tech | Knoten | Law */
+.split {
+  display: grid;
+  grid-template-columns: 1fr var(--kp-split-node) 1fr;
+  height: var(--kp-split-height);
 }
-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
-button:disabled { opacity: .5; cursor: not-allowed; }
-.busy { color: var(--muted); }
+.split::before { content: ""; background: var(--kp-tech); }
+.split > span { background: var(--kp-node); }
+.split::after { content: ""; background: var(--kp-law-area); }
 
-.notice { border-radius: 6px; padding: 8px 12px; margin: 12px 0; border: 1px solid var(--border); background: var(--surface); }
-.notice.warn { background: var(--warn-bg); border-color: var(--warn-border); }
-.notice.error { background: var(--error-bg); border-color: var(--error-border); }
-.notice ul { margin: 0; padding-left: 18px; }
+/* ------------------------------------------------------------ Kopf */
+.header { position: sticky; top: 0; z-index: 5; background: var(--kp-bg); border-bottom: var(--rule) solid var(--kp-line); }
+.header__inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--kp-space-s) var(--kp-space-xl); flex-wrap: wrap;
+  padding-block: var(--kp-space-m);
+}
+.wordmark { display: inline-flex; align-items: baseline; gap: var(--kp-space-s); flex-wrap: wrap; color: var(--kp-text); text-decoration: none; }
+.wordmark__name { font-weight: 600; font-size: 1.3rem; letter-spacing: -.02em; }
+.nav { display: flex; align-items: center; gap: var(--kp-space-2xs) var(--kp-space-l); flex-wrap: wrap; }
+.nav ul { display: flex; gap: var(--kp-space-2xs) var(--kp-space-l); flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
+.nav a { color: var(--kp-text); text-decoration: none; padding-block: var(--kp-space-2xs); display: inline-block; }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--kp-tech); }
+.nav a:hover, .nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--kp-node); }
+.theme {
+  display: inline-flex; align-items: center; gap: var(--kp-space-xs);
+  cursor: pointer; padding: var(--kp-space-2xs) var(--kp-space-s);
+  background: var(--kp-surface); color: var(--kp-text);
+  border: var(--rule) solid var(--kp-line); border-radius: var(--radius);
+}
+.theme:hover { border-color: var(--kp-tech); }
+.theme__icon {
+  width: .75rem; height: .75rem; border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
 
-.results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-top: 24px; }
-.results-head h2 { margin: 0; }
-.meta { color: var(--muted); }
-.table-wrap { overflow-x: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-th { font-size: .85rem; color: var(--muted); font-weight: 600; background: var(--bg); position: sticky; top: 0; }
-tr:last-child td { border-bottom: 0; }
+/* ------------------------------------------------------------ Seitentitel und Abschnitte */
+.page__title { font-size: clamp(1.7rem, 3.6vw, 2.4rem); letter-spacing: -.025em; margin-bottom: var(--kp-space-l); }
+/* Recht-Akzent: Serif kursiv in Bordeaux (wie im Hero der KP-Website) */
+.page__title .legal { font-family: var(--kp-font-serif); font-weight: 400; font-style: italic; letter-spacing: -.01em; color: var(--kp-law); }
+.section__head {
+  display: flex; align-items: center; gap: var(--kp-space-m); flex-wrap: wrap;
+  font-family: var(--kp-font-mono); font-size: .8rem; font-weight: 400;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--kp-tech);
+  margin: var(--kp-space-2xl) 0 var(--kp-space-l);
+}
+.section__head::before { content: ""; width: .55rem; height: .55rem; background: var(--kp-node); flex: none; }
+.section__head::after { content: ""; height: var(--rule); background: var(--kp-line); flex: 1; min-width: 2rem; }
+.section__meta { color: var(--kp-muted); letter-spacing: .08em; }
+
+/* ------------------------------------------------------------ Karte, Formular, Schaltflächen */
+.card { background: var(--kp-surface); border: var(--rule) solid var(--kp-line); border-radius: var(--radius); padding: var(--kp-space-l); }
+.field > label { display: flex; align-items: baseline; gap: var(--kp-space-s); font-weight: 600; margin-bottom: var(--kp-space-xs); }
+textarea, input[type=text], input[type=date] {
+  width: 100%; font: inherit; color: var(--kp-text); background: var(--kp-bg);
+  border: var(--rule) solid var(--kp-line); border-radius: var(--radius);
+  padding: var(--kp-space-xs) var(--kp-space-s);
+}
+textarea, input[type=text] { font-family: var(--kp-font-mono); font-size: .95rem; }
+textarea:hover, input[type=text]:hover, input[type=date]:hover { border-color: var(--kp-muted); }
+input[type=checkbox], input[type=radio] { accent-color: var(--kp-tech); }
+.hint { color: var(--kp-muted); font-size: .875rem; margin: var(--kp-space-xs) 0 0; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--kp-space-m); margin-top: var(--kp-space-l); }
+fieldset { border: var(--rule) solid var(--kp-line); border-radius: var(--radius); padding: var(--kp-space-s) var(--kp-space-m); margin: 0; min-width: 0; }
+legend { padding: 0 var(--kp-space-2xs); }
+.legend-sub { margin: var(--kp-space-m) 0 var(--kp-space-2xs); }
+.check { display: flex; gap: var(--kp-space-xs); align-items: baseline; padding-block: 2px; }
+.stack { display: block; margin-bottom: var(--kp-space-xs); }
+.actions, .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kp-space-s) var(--kp-space-m); }
+.actions { margin-top: var(--kp-space-l); }
+.toolbar { margin-bottom: var(--kp-space-s); }
+.inline-input { display: flex; gap: var(--kp-space-s); }
+.inline-input input { flex: 1; min-width: 0; }
+.search--inline .busy { display: block; margin-top: var(--kp-space-xs); }
+.busy { color: var(--kp-muted); font-size: .9rem; }
+
+.button {
+  display: inline-flex; align-items: center; gap: var(--kp-space-xs);
+  padding: var(--kp-space-xs) var(--kp-space-m);
+  font: 600 1rem/1.4 var(--kp-font-sans); text-decoration: none; cursor: pointer;
+  border-radius: var(--radius); border: var(--rule) solid transparent;
+}
+.button--primary { background: var(--kp-tech); color: var(--kp-on-tech); }
+.button--primary:hover { background: var(--kp-text); color: var(--kp-bg); }
+.button:disabled { opacity: .45; cursor: not-allowed; }
+.button:disabled:hover { background: var(--kp-tech); color: var(--kp-on-tech); }
+
+/* ------------------------------------------------------------ Meldungen
+ * Fehler Signalrot, Achtung Ocker, Hinweis Pink (wie die pinke Hinweislinie im Handbuch).
+ * Immer mit Wort davor, nie nur Farbe.
+ */
+.notice {
+  --edge: var(--kp-node);
+  background: var(--kp-surface); border: var(--rule) solid var(--kp-line);
+  box-shadow: inset var(--kp-edge) 0 0 var(--edge);
+  padding: var(--kp-space-s) var(--kp-space-m) var(--kp-space-s) calc(var(--kp-space-m) + var(--kp-edge));
+  margin: var(--kp-space-m) 0;
+}
+.notice p:last-child, .notice ul { margin-bottom: 0; }
+.notice ul { padding-left: var(--kp-space-l); margin-top: 0; }
+.notice__label { display: block; margin-bottom: var(--kp-space-2xs); color: var(--edge); font-weight: 600; }
+.notice--error { --edge: var(--kp-signal); }
+.notice--warn { --edge: var(--kp-warning); }
+.status { font-family: var(--kp-font-mono); font-size: .75rem; letter-spacing: .06em; }
+.status--success { color: var(--kp-success); }
+
+/* ------------------------------------------------------------ Trefferliste */
+.table-wrap { overflow-x: auto; background: var(--kp-surface); border: var(--rule) solid var(--kp-line); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: .9375rem; }
+th {
+  font-family: var(--kp-font-mono); font-size: .72rem; font-weight: 400; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--kp-muted); text-align: left;
+  background: var(--kp-surface); position: sticky; top: 0;
+}
+th, td { padding: var(--kp-space-s); vertical-align: top; border-bottom: var(--rule) solid var(--kp-line); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--kp-bg); }
 .nowrap { white-space: nowrap; }
-.gz { font-weight: 600; }
-.ecli, .keywords { color: var(--muted); font-size: .8rem; }
-.keywords { max-width: 36ch; }
-.norms span { display: inline-block; font-size: .8rem; margin: 0 6px 2px 0; padding: 0 4px; border-radius: 4px; background: var(--bg); }
-.tag { font-size: .8rem; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
-.tag-text { background: var(--tag-text); }
-.tag-rs { background: var(--tag-rs); }
-.links a { margin-right: 8px; color: var(--accent); font-weight: 600; }
-code { background: var(--bg); padding: 0 3px; border-radius: 3px; }
+.gz { font-family: var(--kp-font-mono); font-weight: 600; font-size: .9rem; }
+.ecli { font-family: var(--kp-font-mono); color: var(--kp-muted); font-size: .75rem; }
+.keywords { color: var(--kp-muted); font-size: .85rem; max-width: 36ch; margin-top: var(--kp-space-2xs); }
+.links { display: inline-flex; gap: var(--kp-space-s); flex-wrap: wrap; }
+.links--stacked { display: flex; flex-direction: column; gap: var(--kp-space-2xs); align-items: flex-start; }
+.links a, a.ext { display: inline-flex; align-items: center; gap: var(--kp-space-3xs); font-weight: 600; }
+a.ext .icon { width: .95em; height: .95em; }
+
+/* Tags mit Farbkante, eckig (wie \lawtag). Normen und Dokumenttyp sind Recht → law-area. */
+.tag, .norms li {
+  display: inline-block; padding: var(--kp-space-3xs) var(--kp-space-xs) var(--kp-space-3xs) var(--kp-space-s);
+  font-size: .8rem; line-height: 1.4; white-space: nowrap;
+  background: var(--kp-surface); border: var(--rule) solid var(--kp-line);
+  box-shadow: inset 3px 0 0 var(--kp-law-area);
+}
+.tag--muted { box-shadow: inset 3px 0 0 var(--kp-line); }
+.norms { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--kp-space-2xs); }
+.norms li { font-family: var(--kp-font-mono); font-size: .75rem; }
+
+/* ------------------------------------------------------------ Gesetzesansicht */
+.statute { display: grid; grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr); gap: var(--kp-space-l); margin-top: var(--kp-space-xl); align-items: start; }
+.versions { padding: var(--kp-space-m); position: sticky; top: 6rem; }
+.versions__title { margin-bottom: var(--kp-space-s); }
+.versions ol { list-style: none; margin: 0; padding: 0; border-top: var(--rule) solid var(--kp-line); }
+.versions li { border-bottom: var(--rule) solid var(--kp-line); }
+.versions a { display: block; padding: var(--kp-space-xs) var(--kp-space-s); color: var(--kp-text); text-decoration: none; }
+.versions a:hover { background: var(--kp-bg); }
+.versions li.is-selected a { background: var(--kp-bg); box-shadow: inset var(--kp-edge) 0 0 var(--kp-law-area); }
+.versions__range { display: block; font-family: var(--kp-font-mono); font-size: .85rem; font-weight: 600; }
+.versions__source { display: block; font-size: .8rem; color: var(--kp-muted); }
+
+.law { padding: clamp(var(--kp-space-l), 3vw, var(--kp-space-xl)); }
+.law__head { border-bottom: var(--rule) solid var(--kp-line); padding-bottom: var(--kp-space-m); margin-bottom: var(--kp-space-m); }
+.law__head .label { margin-bottom: var(--kp-space-2xs); }
+/* Namen und Recht in Plex Serif (E-03) */
+.law__title { font-family: var(--kp-font-serif); font-weight: 400; font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -.015em; color: var(--kp-law); }
+.law__meta { display: flex; flex-wrap: wrap; gap: var(--kp-space-2xs) var(--kp-space-s); align-items: baseline; color: var(--kp-muted); font-size: .9rem; margin: var(--kp-space-xs) 0 0; }
+.law__text { font-family: var(--kp-font-serif); font-size: 1.05rem; line-height: 1.65; max-width: 46rem; }
+.law__text h3 { font-family: var(--kp-font-serif); font-weight: 600; font-size: 1.1rem; margin: var(--kp-space-l) 0 var(--kp-space-xs); }
+.law__text p { margin: 0 0 var(--kp-space-xs); }
+.indent-1 { margin-left: var(--kp-space-l) !important; }
+.indent-2 { margin-left: var(--kp-space-2xl) !important; }
+.indent-3, .indent-4 { margin-left: var(--kp-space-3xl) !important; }
+
+.materials .section__head { margin-top: var(--kp-space-2xl); }
+.details { display: grid; grid-template-columns: 9.5rem 1fr; gap: var(--kp-space-xs) var(--kp-space-m); margin: 0 0 var(--kp-space-l); }
+.details dt { font-family: var(--kp-font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--kp-muted); padding-top: var(--kp-space-3xs); }
+.details dd { margin: 0; }
+.materials__sub { font-size: 1.05rem; margin: var(--kp-space-xl) 0 var(--kp-space-s); }
+.explanation {
+  font-family: var(--kp-font-serif); line-height: 1.65; max-width: 46rem;
+  border-left: var(--kp-edge) solid var(--kp-law-area);
+  padding: var(--kp-space-2xs) 0 var(--kp-space-2xs) var(--kp-space-m); margin: 0 0 var(--kp-space-l);
+}
+.explanation h4 { font-family: var(--kp-font-sans); font-size: .95rem; margin-bottom: var(--kp-space-xs); }
+
+/* ------------------------------------------------------------ Fuß */
+.footer { border-top: var(--rule) solid var(--kp-line); padding-block: var(--kp-space-l); }
+.footer__inner {
+  display: flex; flex-direction: column; gap: var(--kp-space-xs);
+  font-family: var(--kp-font-mono); font-size: .75rem; color: var(--kp-muted);
+}
+.footer a { color: var(--kp-muted); }
+.footer a:hover { color: var(--kp-tech); }
+
+/* ------------------------------------------------------------ Schmal (Handy) */
+@media (max-width: 52rem) {
+  .statute { grid-template-columns: 1fr; }
+  .versions { position: static; }
+}
+@media (max-width: 36rem) {
+  .header { position: static; }
+  .nav { width: 100%; justify-content: space-between; }
+  .details { grid-template-columns: 1fr; }
+  .details dd { margin-bottom: var(--kp-space-xs); }
+  .inline-input { flex-direction: column; }
+  .card { padding: var(--kp-space-m); }
+}
+
+/* ------------------------------------------------------------ Druck */
+@media print {
+  body { background: none; }
+  .header { position: static; }
+  .theme, .skip-link, .search, .toolbar, .versions, .busy { display: none; }
+  .statute { grid-template-columns: 1fr; }
+  .sheet { border: 0; }
+}

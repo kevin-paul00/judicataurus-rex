@@ -1,0 +1,69 @@
+/* Generated from config/ by tools/ – do not edit by hand. */
+:root {
+  --kp-tech: #1F3F8F;
+  --kp-law: #7A1F3D;
+  --kp-law-area: #7A1F3D;
+  --kp-node: #D6338A;
+  --kp-text: #0E1B2C;
+  --kp-muted: #4B5A66;
+  --kp-bg: #F5F6F8;
+  --kp-surface: #FFFFFF;
+  --kp-line: #D7DCE4;
+  --kp-on-tech: #FFFFFF;
+  --kp-signal: #D22F27;
+  --kp-success: #2C735C;
+  --kp-warning: #86621A;
+  --kp-font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --kp-font-serif: "IBM Plex Serif", Georgia, serif;
+  --kp-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --kp-split-height: 6px;
+  --kp-split-node: 2rem;
+  --kp-space-3xs: 2px;
+  --kp-space-2xs: 4px;
+  --kp-space-xs: 8px;
+  --kp-space-s: 12px;
+  --kp-space-m: 16px;
+  --kp-space-l: 24px;
+  --kp-space-xl: 32px;
+  --kp-space-2xl: 48px;
+  --kp-space-3xl: 64px;
+  --kp-space-4xl: 96px;
+  --kp-space-5xl: 128px;
+  --kp-radius: 4px;
+  --kp-line-width: 1px;
+  --kp-edge: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kp-tech: #8FB0FF;
+    --kp-law: #E8909C;
+    --kp-law-area: #B8304F;
+    --kp-node: #F040B8;
+    --kp-text: #E6ECEF;
+    --kp-muted: #9AABB8;
+    --kp-bg: #0C1524;
+    --kp-surface: #131F31;
+    --kp-line: #24324A;
+    --kp-on-tech: #0C1524;
+    --kp-signal: #FF6B5E;
+    --kp-success: #7BCFB2;
+    --kp-warning: #EEC96C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --kp-tech: #8FB0FF;
+  --kp-law: #E8909C;
+  --kp-law-area: #B8304F;
+  --kp-node: #F040B8;
+  --kp-text: #E6ECEF;
+  --kp-muted: #9AABB8;
+  --kp-bg: #0C1524;
+  --kp-surface: #131F31;
+  --kp-line: #24324A;
+  --kp-on-tech: #0C1524;
+  --kp-signal: #FF6B5E;
+  --kp-success: #7BCFB2;
+  --kp-warning: #EEC96C;
+  color-scheme: dark;
+}

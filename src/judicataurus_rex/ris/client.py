@@ -6,6 +6,7 @@ Suche wie PDF-Download, über einen gemeinsamen :class:`RateLimiter`.
 """
 
 import asyncio
+import re
 import time
 from collections.abc import Callable
 from datetime import date
@@ -14,13 +15,16 @@ import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from judicataurus_rex.config import Settings
-from judicataurus_rex.ris.mapping import to_decision
-from judicataurus_rex.ris.models import DOCUMENT_ID_PATTERN, Court, Decision
-from judicataurus_rex.ris.raw_models import Envelope
+from judicataurus_rex.ris.mapping import to_bgbl_info, to_decision, to_law_version
+from judicataurus_rex.ris.models import DOCUMENT_ID_PATTERN, BgblInfo, Court, Decision, LawVersion
+from judicataurus_rex.ris.raw_models import DocumentReference, Envelope
 
 PAGE_SIZE = 100
 _PAGE_SIZE_PARAM = "OneHundred"
 _PAGE_OUT_OF_RANGE = "Seitennummer ist höher"
+_DOCUMENT_HOST = "https://ogd.ris.bka.gv.at/"
+_GESETZESNUMMER = re.compile(r"^\d{8}$")
+_BGBL = re.compile(r"BGBl\.\s*(?P<part>I{1,3})\s*Nr\.\s*(?P<number>\d+)/(?P<year>\d{4})")
 
 
 class RisError(RuntimeError):
@@ -136,7 +140,27 @@ class RisClient:
         if date_to is not None:
             params["EntscheidungsdatumBis"] = date_to.isoformat()
 
-        response = await self._get(f"{self._settings.api_base_url}/Judikatur", params)
+        total, references = await self._query("Judikatur", params)
+        decisions: list[Decision] = []
+        skipped = 0
+        for reference in references:
+            decision = to_decision(reference, court)
+            if decision is None:
+                skipped += 1
+            else:
+                decisions.append(decision)
+        return Page(
+            total=total,
+            page_number=page_number,
+            decisions=tuple(decisions),
+            skipped=skipped,
+        )
+
+    async def _query(
+        self, endpoint: str, params: dict[str, str]
+    ) -> tuple[int, list[DocumentReference]]:
+        """Eine Suchanfrage; gibt (Gesamttreffer, Dokumente dieser Seite) zurück."""
+        response = await self._get(f"{self._settings.api_base_url}/{endpoint}", params)
         try:
             envelope = Envelope.model_validate_json(response.content)
         except ValidationError as exc:
@@ -145,25 +169,66 @@ class RisClient:
         body = envelope.body
         if body.error is not None:
             if _PAGE_OUT_OF_RANGE in body.error.message:
-                return Page(total=0, page_number=page_number, decisions=())
+                return 0, []
             raise RisError(f"RIS-Fehler: {body.error.message}")
         if body.results is None:
             raise RisError("RIS-Antwort enthält weder Ergebnisse noch Fehlermeldung.")
+        return _to_int(body.results.hits.total), body.results.references
 
-        decisions: list[Decision] = []
-        skipped = 0
-        for reference in body.results.references:
-            decision = to_decision(reference, court)
-            if decision is None:
-                skipped += 1
-            else:
-                decisions.append(decision)
-        return Page(
-            total=_to_int(body.results.hits.total),
-            page_number=page_number,
-            decisions=tuple(decisions),
-            skipped=skipped,
-        )
+    async def law_versions(self, gesetzesnummer: str, paragraph: str) -> list[LawVersion]:
+        """Alle Fassungen eines Paragraphen (ältste zuerst)."""
+        if _GESETZESNUMMER.fullmatch(gesetzesnummer) is None:
+            raise ValueError(f"Ungültige Gesetzesnummer: {gesetzesnummer!r}")
+        versions: dict[str, LawVersion] = {}
+        page_number = 1
+        while True:
+            params = {
+                "Applikation": "BrKons",
+                "Gesetzesnummer": gesetzesnummer,
+                "Abschnitt.Typ": "Paragraph",
+                "Abschnitt.Von": paragraph,
+                "Abschnitt.Bis": paragraph,
+                "DokumenteProSeite": _PAGE_SIZE_PARAM,
+                "Seitennummer": str(page_number),
+            }
+            total, references = await self._query("Bundesrecht", params)
+            for reference in references:
+                version = to_law_version(reference)
+                # Abschnitt.Von/Bis liefert auch "§ 67a"; nur exakte Treffer behalten.
+                if version is not None and _same_paragraph(version.label, paragraph):
+                    versions[version.id] = version
+            if not references or page_number * PAGE_SIZE >= total:
+                break
+            page_number += 1
+        return sorted(versions.values(), key=lambda v: (v.valid_from or date.min, v.id))
+
+    async def bgbl_info(self, bgbl: str) -> BgblInfo | None:
+        """Metadaten eines Bundesgesetzblatts, z. B. ``"BGBl. I Nr. 93/2021"``.
+
+        ``None``, wenn das Blatt nicht im authentischen BGBl (ab 2004) steht.
+        """
+        match = _BGBL.search(bgbl)
+        if match is None:
+            return None
+        part, number, year = match.group("part"), match.group("number"), match.group("year")
+        params = {
+            "Applikation": "BgblAuth",
+            "Bgblnummer": f"{number}/{year}",
+            "Teil": str(len(part)),
+        }
+        _, references = await self._query("Bundesrecht", params)
+        wanted_id = f"BGBLA_{year}_{part}_{number}"
+        for reference in references:
+            if reference.data.metadaten.technisch.id == wanted_id:
+                return to_bgbl_info(reference)
+        return None
+
+    async def fetch_html(self, url: str) -> str:
+        """Lädt ein HTML-Dokument (z. B. den Text einer Fassung) aus dem RIS."""
+        if not url.startswith(_DOCUMENT_HOST):
+            raise ValueError(f"Keine RIS-Dokument-URL: {url!r}")
+        response = await self._get(url)
+        return response.text
 
     def pdf_url(self, court: Court, document_id: str) -> str:
         if DOCUMENT_ID_PATTERN.fullmatch(document_id) is None:
@@ -177,6 +242,11 @@ class RisClient:
         if "pdf" not in content_type.casefold():
             raise RisError(f"Kein PDF für {document_id} verfügbar (Content-Type: {content_type}).")
         return response.content
+
+
+def _same_paragraph(label: str, paragraph: str) -> bool:
+    """``"§ 67"`` passt zu ``"67"``, ``"§ 67a"`` nicht."""
+    return label.replace("§", "").strip().casefold() == paragraph.strip().casefold()
 
 
 def _to_int(value: str) -> int:

@@ -1,0 +1,62 @@
+{
+ "pagetype": "geschichtsseite",
+ "content": {
+  "title": "Universitätsgesetz, Hochschul-Qualitätssicherungsgesetz u.a., Änderung",
+  "zitation": "662 d.B.",
+  "description": "Bundesgesetz, mit dem das Universitätsgesetz 2002, das Hochschul-Qualitätssicherungsgesetz, das Hochschulgesetz 2005, das Fachhochschulgesetz und das Privathochschulgesetz geändert werden",
+  "gp_code": "XXVII",
+  "ityp": "I",
+  "inr": 662,
+  "doktyp": "RV",
+  "documents": [
+   {
+    "title": "Gesetzestext",
+    "documents": [
+     {
+      "link": "/dokument/XXVII/I/662/fname_884974.pdf",
+      "type": "PDF"
+     },
+     {
+      "link": "/dokument/XXVII/I/662/fnameorig_884974.html",
+      "type": "HTML"
+     }
+    ]
+   },
+   {
+    "title": "Vorblatt und WFA",
+    "documents": [
+     {
+      "link": "/dokument/XXVII/I/662/fname_884976.pdf",
+      "type": "PDF"
+     },
+     {
+      "link": "/dokument/XXVII/I/662/fnameorig_884976.html",
+      "type": "HTML"
+     }
+    ]
+   },
+   {
+    "title": "Erläuterungen",
+    "documents": [
+     {
+      "link": "/dokument/XXVII/I/662/fname_884977.pdf",
+      "type": "PDF"
+     },
+     {
+      "link": "/dokument/XXVII/I/662/fnameorig_884977.html",
+      "type": "HTML"
+     }
+    ]
+   },
+   {
+    "title": "Textgegenüberstellung",
+    "documents": [
+     {
+      "link": "/dokument/XXVII/I/662/imfname_884978.pdf",
+      "type": "PDF"
+     }
+    ]
+   }
+  ]
+ }
+}

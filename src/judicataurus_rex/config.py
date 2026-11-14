@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 # Nutzungsbedingungen der RIS-OGD-Schnittstelle: höchstens 0,5 Anfragen pro Sekunde,
 # keine parallelen Verbindungen. 2 Sekunden ist daher die Untergrenze.
 MIN_ALLOWED_INTERVAL_SECONDS = 2.0
+# Das Parlament nennt kein Limit; wir bleiben trotzdem zurückhaltend.
+MIN_PARLAMENT_INTERVAL_SECONDS = 0.5
 
 
 class Settings(BaseModel):
@@ -30,6 +32,12 @@ class Settings(BaseModel):
     max_documents_per_query: int = Field(default=1000, ge=100)
     max_zip_documents: int = Field(default=100, ge=1)
     cache_ttl_seconds: float = Field(default=3600.0, ge=0.0)
+    parlament_base_url: str = "https://www.parlament.gv.at"
+    parlament_request_interval_seconds: float = Field(
+        default=1.0, ge=MIN_PARLAMENT_INTERVAL_SECONDS
+    )
+    # Fassungen, Bundesgesetzblätter und Erläuterungen ändern sich kaum: lange cachen.
+    law_cache_ttl_seconds: float = Field(default=86400.0, ge=0.0)
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
 
@@ -63,6 +71,12 @@ class Settings(BaseModel):
             ),
             max_zip_documents=integer("MAX_ZIP_DOCUMENTS", defaults.max_zip_documents),
             cache_ttl_seconds=number("CACHE_TTL_SECONDS", defaults.cache_ttl_seconds),
+            parlament_base_url=text("PARLAMENT_BASE_URL", defaults.parlament_base_url),
+            parlament_request_interval_seconds=number(
+                "PARLAMENT_REQUEST_INTERVAL_SECONDS",
+                defaults.parlament_request_interval_seconds,
+            ),
+            law_cache_ttl_seconds=number("LAW_CACHE_TTL_SECONDS", defaults.law_cache_ttl_seconds),
             host=text("HOST", defaults.host),
             port=integer("PORT", defaults.port),
         )

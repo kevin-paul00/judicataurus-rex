@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
@@ -11,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from judicataurus_rex.config import Settings
 from judicataurus_rex.downloads import ATTRIBUTION, build_zip, pdf_filename
+from judicataurus_rex.ris import laws
 from judicataurus_rex.ris.client import RisError
 from judicataurus_rex.ris.models import (
     DEFAULT_COURTS,
@@ -22,18 +24,39 @@ from judicataurus_rex.ris.models import (
     SearchRequest,
     SearchResult,
 )
-from judicataurus_rex.ris.normalize import parse_queries
+from judicataurus_rex.ris.normalize import NormParseError, expand, parse_queries, parse_query
 from judicataurus_rex.ris.search import SearchService
+from judicataurus_rex.statute import StatuteError, StatuteService, StatuteView
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 _EXAMPLE_NORMS = "UG § 63\nHSG 2014 § 31"
+_EXAMPLE_STATUTE = "UG § 67"
+
+
+def statute_link(norm: str, as_of: date | None = None) -> str | None:
+    """Link zur Gesetzesansicht für einen RIS-Normeintrag wie ``"UG §67 Abs1"``.
+
+    ``None``, wenn das Gesetz (noch) keine Gesetzesansicht hat. Mit ``as_of`` öffnet die
+    Ansicht die an diesem Tag geltende Fassung (z. B. am Entscheidungsdatum).
+    """
+    parsed = expand(norm)
+    if not parsed or parsed[0].kind != "§" or parsed[0].number is None:
+        return None
+    law = laws.lookup(parsed[0].law)
+    if law is None or law.gesetzesnummer is None:
+        return None
+    params = {"norm": f"{law.canonical} § {parsed[0].number}"}
+    if as_of is not None:
+        params["stichtag"] = as_of.isoformat()
+    return "/gesetz?" + urlencode(params)
 
 
 @dataclass(frozen=True, slots=True)
 class Services:
     settings: Settings
     search: SearchService
+    statute: StatuteService
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,8 +176,55 @@ def build_router(services: Services) -> APIRouter:
                 "result": result,
                 "errors": errors,
                 "searched": searched,
+                "active": "judikatur",
+                "statute_link": statute_link,
                 "attribution": ATTRIBUTION,
                 "max_zip": settings.max_zip_documents,
+                "interval": settings.request_interval_seconds,
+            },
+        )
+
+    @router.get("/gesetz", response_class=HTMLResponse)
+    async def statute(  # pyright: ignore[reportUnusedFunction]
+        request: Request,
+        norm: Annotated[str | None, Query()] = None,
+        fassung: Annotated[str | None, Query()] = None,
+        stichtag: Annotated[str, Query()] = "",
+    ) -> HTMLResponse:
+        errors: list[str] = []
+        view: StatuteView | None = None
+        if norm is not None:
+            as_of = _parse_date(stichtag, "Stichtag", errors)
+            version_id = fassung if fassung and DOCUMENT_ID_PATTERN.fullmatch(fassung) else None
+            if fassung and version_id is None:
+                errors.append(f"Ungültige Fassung: {fassung}")
+            try:
+                query = parse_query(norm)
+            except NormParseError as exc:
+                errors.append(str(exc))
+            else:
+                if not errors:
+                    try:
+                        view = await services.statute.view(query, version_id, as_of)
+                    except StatuteError as exc:
+                        errors.append(str(exc))
+
+        norm_text = (
+            f"{view.law.canonical} § {view.paragraph}"
+            if view is not None
+            else (norm if norm is not None else _EXAMPLE_STATUTE)
+        )
+        return TEMPLATES.TemplateResponse(
+            request,
+            "gesetz.html",
+            {
+                "norm_text": norm_text,
+                "active": "gesetz",
+                "view": view,
+                "errors": errors,
+                "today": date.today(),
+                "available": [lw.canonical for lw in laws.KNOWN_LAWS if lw.gesetzesnummer],
+                "attribution": ATTRIBUTION,
                 "interval": settings.request_interval_seconds,
             },
         )
